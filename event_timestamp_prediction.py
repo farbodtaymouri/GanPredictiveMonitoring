@@ -34,6 +34,7 @@ import pathlib
 import os
 import bottleneck as bn
 from datetime import datetime
+from sklearn.metrics import precision_recall_fscore_support
 device=torch.device('cuda:0')
 plt.style.use('ggplot')
 
@@ -242,6 +243,8 @@ def model_eval_test(modelG, mode, obj):
     mistakes = {}
 
     accuracy_record_2most_probable = []
+    y_truth_list = []
+    y_pred_last_event_list = []
 
     for mini_batch in iter(data_loader):
 
@@ -268,6 +271,10 @@ def model_eval_test(modelG, mode, obj):
 
         y_pred_last_event = torch.argmax(F.softmax(y_pred_last[:, :, events], dim=2), dim=2)
         # print("y_pred_last_event:", y_pred_last_event)
+
+        #Storing list of predictions and corresponding ground truths (to be used for f1score)
+        y_truth_list += list(y_truth_event.flatten().data.cpu().numpy().astype(int))
+        y_pred_last_event_list += list(y_pred_last_event.flatten().data.cpu().numpy().astype(int))
 
         y_pred_second_last = y_pred[0: batch, prefix_len - 2, :]
         y_pred_second_last = y_pred_second_last.view((batch, 1, -1))
@@ -330,6 +337,15 @@ def model_eval_test(modelG, mode, obj):
 
     rnnG.train()
 
+
+    # computing F1scores wiethed
+    weighted_precision, weighted_recall, weighted_f1score, support = precision_recall_fscore_support(y_truth_list,
+                                                                                            y_pred_last_event_list,
+                                                                                            average='weighted',
+                                                                                            labels=events)
+    # computing F1score per each label
+    precision, recall, f1score, support = precision_recall_fscore_support(y_truth_list, y_pred_last_event_list, average=None, labels=events)
+
     #Calculating the mean accuracy of prediction per events
     for k in accuracy_pred_per_event.keys():
         accuracy_pred_per_event[k] = [np.mean(accuracy_pred_per_event[k]), len(accuracy_pred_per_event[k])]
@@ -352,7 +368,13 @@ def model_eval_test(modelG, mode, obj):
                        "total number of predictions:"+ str(len(accuracy_record))+','+str(np.sum(accuracy_record)) +
                        "\n The accuracy of the model with the most probable event:" + str(np.mean(accuracy_record))+
                        "\n The accuracy of the model with the 2 most probable events:" +str(np.mean(accuracy_record_2most_probable))+
-                       '\n The MAE (days) for the next event prediction is:' + str(np.mean(accuracy_time_stamp)) +'\n' )
+                       '\n The MAE (days) for the next event prediction is:' + str(np.mean(accuracy_time_stamp)) +
+                       '\n The list of activity names:' + str(events) +
+                       '\n The precision per activity names:' + str(precision) +
+                       '\n The recall per activity names:' + str(recall) +
+                       '\n The F1 score per activity names:' + str(f1score) +
+                       '\n The support per activity names:' + str(support) +
+                        '\n The weighted precision, recall, and F1-score are: ' + str(weighted_precision)+','+str(weighted_recall)+','+str(weighted_f1score) +'\n' )
 
             fout.write("The recall of prediction per events (event, accuracy, frequency):\n")
             pprint.pprint(accuracy_pred_per_event, stream=fout)
@@ -366,6 +388,16 @@ def model_eval_test(modelG, mode, obj):
 
 
 
+    print("Labels:", events)
+    print("Wighted Precision:", weighted_precision)
+    print("Wighted Recall:", weighted_recall)
+    print("Wighted F1score:", weighted_f1score)
+    print("---------------------")
+    print("Labels:", events)
+    print("Precision:", precision)
+    print("Recall:", recall)
+    print("F1score:", f1score)
+    print("Support:", support)
 
     print("Truth: first prediction, second prediction\n")
     print("total number of predictions:", len(accuracy_record), np.sum(accuracy_record))

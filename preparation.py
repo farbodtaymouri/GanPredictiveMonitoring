@@ -421,7 +421,7 @@ class Input:
         # Creating indexes by which obtaining train,test and validation sets
 
 
-        train_inds = random.sample(range(cls.design_matrix_padded.size()[0]), k=round(cls.design_matrix_padded.size()[0] * .8))
+        train_inds = np.arange(0, round(cls.design_matrix_padded.size()[0] * .8))
 
         # Generating index for the test dataset
         test_inds = list(set(range(cls.design_matrix_padded.size()[0])).difference(set(train_inds)))

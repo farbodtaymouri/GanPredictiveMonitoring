@@ -276,30 +276,6 @@ class Input:
     @classmethod
     def prefix_creating(cls, prefix=2, mode = 'event_prediction'):
 
-        #   prefix=3
-        #   0  1  2  3  4  5  6  duration_time  remaining_time  class  CaseID
-        # 0  0  0  0  1  0  0  0            0.0       1032744.0      3  173688
-        # 1  0  0  0  0  0  1  0         1915.0       1030829.0      5  173688
-        # 2  0  0  0  0  0  1  0       620092.0        410737.0      5  173688
-        # ---------------------
-        # the prediction: 5
-        #   0  1  2  3  4  5  6  duration_time  remaining_time  class  CaseID
-        # 1  0  0  0  0  0  1  0         1915.0       1030829.0      5  173688
-        # 2  0  0  0  0  0  1  0       620092.0        410737.0      5  173688
-        # 3  0  0  0  0  0  1  0       154865.0        255872.0      5  173688
-        # ---------------------
-        # the prediction: 6
-        #   0  1  2  3  4  5  6  duration_time  remaining_time  class  CaseID
-        # 2  0  0  0  0  0  1  0       620092.0        410737.0      5  173688
-        # 3  0  0  0  0  0  1  0       154865.0        255872.0      5  173688
-        # 4  0  0  0  0  0  0  1       255872.0             0.0      6  173688
-        # ---------------------
-        # the prediction: 0
-        #   0  1  2  3  4  5  6  duration_time  remaining_time  class  CaseID
-        # 3  0  0  0  0  0  1  0       154865.0        255872.0      5  173688
-        # 4  0  0  0  0  0  0  1       255872.0             0.0      6  173688
-        # 5  1  0  0  0  0  0  0            0.0             0.0      0       0
-
 
         if (mode == "timestamp_prediction"):
             clsN = cls.design_matrix.columns.get_loc('duration_time')
@@ -331,7 +307,7 @@ class Input:
             gr_shift.loc[gr.shape[0] - 1, '0'] = 1
 
             # Selecting only traces that has length greater than the defined prefix
-            #clsN = gr.columns.get_loc('class')
+
             if (gr.shape[0] - 1 > prefix):
                 for i in range(gr.shape[0]):
                     # if (i+prefix == gr.shape[0]):
@@ -339,11 +315,6 @@ class Input:
                     # print(gr.iloc[i:i+prefix])
                     temp.append(torch.tensor(gr.iloc[i:i + prefix].values, dtype=torch.float, requires_grad=False))
 
-                    # #----------------
-                    # #print("the prediction:", "the i", i ,gr.iloc[i+prefix,cls])
-                    # temp_shifted.append(torch.tensor([gr.iloc[i+prefix,cls]],dtype=torch.float, requires_grad=False))
-                    # #print("------------------------------------------------------------")
-                    # #------------------
 
                     # Storing the next element after the prefix as the prediction class
                     try:
@@ -356,9 +327,6 @@ class Input:
                         temp_shifted.append(torch.tensor([np.float16(0)], dtype=torch.float, requires_grad=False))
                     # print("****************************")
 
-            # print(gr['class'][0], gr.iloc[0:3,:], gr.shape)
-            # print("Temp:",temp, temp[0].size(), "shifted\n", temp_shifted)
-            # print("-------------------------------------------------------------------------")
 
             # break
         desing_matrix_padded = pad_sequence(temp, batch_first=True)
@@ -381,32 +349,6 @@ class Input:
     ########################################################################################
     @classmethod
     def __pad_correction(cls):
-        # The first column is the stop word (end of sequence) showing by class number zero, however
-        # When padding it does not marke it, so we have to set it as 1, otherwise the model being trained coudn't understant where to stop
-        # tensor([[0., 0., 0., 1., 0., 0., 0.],
-        #       [0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 1., 0.]])
-        # #------------------------------------
-        # tensor([[0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 0., 1.]])
-        # #------------------------------------
-        # tensor([[0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 0., 1.],
-        #       [1., 0., 0., 0., 0., 0., 0.]])
-        # #------------------------------------
-        # tensor([[0., 0., 0., 0., 0., 1., 0.],
-        #       [0., 0., 0., 0., 0., 0., 1.],
-        #       [1., 0., 0., 0., 0., 0., 0.],
-        #       [1., 0., 0., 0., 0., 0., 0.]])
-        # #------------------------------------
-        # tensor([[0., 0., 0., 0., 0., 0., 1.],
-        #       [1., 0., 0., 0., 0., 0., 0.],
-        #       [1., 0., 0., 0., 0., 0., 0.],
-        #       [1., 0., 0., 0., 0., 0., 0.]])
 
         for i in range(cls.design_matrix_padded.size()[0]):
             u = (cls.design_matrix_padded[i, :, 0] == 1).nonzero()
@@ -426,7 +368,7 @@ class Input:
         # Generating index for the test dataset
         test_inds = list(set(range(cls.design_matrix_padded.size()[0])).difference(set(train_inds)))
         validation_inds = test_inds[0:round(0.3 * len(test_inds))]
-        test_inds = test_inds[round(0.1 * len(test_inds)):]
+        test_inds = test_inds[round(0.3 * len(test_inds)):]
 
 
         cls.train_inds = train_inds
@@ -439,18 +381,6 @@ class Input:
     #################################################################################
     @classmethod
     def testData_correction(cls):
-        # When we create prefixes, for testing it is not necessary to stop evaluation when we reach the end of sequences
-        # However in traning we can use this data
-        #  [[0., 0., 0., 0., 0., 1., 0.],
-        #  [0., 0., 0., 0., 0., 1., 0.],
-        #  [0., 0., 0., 0., 0., 0., 1.],
-        #  [1., 0., 0., 0., 0., 0., 0.]],
-        #  -------------------------------------------
-        #  [[0., 0., 0., 0., 0., 1., 0.],
-        #  [0., 0., 0., 0., 0., 0., 1.],
-        #  [1., 0., 0., 0., 0., 0., 0.],
-        #  [1., 0., 0., 0., 0., 0., 0.]],
-        # For example the second prefix must be removed since we reached at the end already, no need for more prediction
 
         test_inds_new = []
         for i in cls.test_inds:

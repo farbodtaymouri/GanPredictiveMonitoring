@@ -54,14 +54,15 @@ class Input:
         cls.path = os.getcwd() + "/" + cls.dataset_name + '/'+mode + '/prefix_' + str(cls.prefix_len)
 
         #Reading a file
-        if(path.split('.')[1] == 'csv'):
+        if(path.split('.')[-1] == 'csv'):  #path.split('.')[1]---> path.split('.')[-1] to handle path like ./dataset/filename.csv
             #Reading a CSV file
             #data_augment = cls.__read_csv(path)
             data_augment = cls.__read_csv_massive(path)
-        elif(path.split('.')[1] == 'pkl'):
+        elif(path.split('.')[-1] == 'pkl'):   # path.split('.')[1]---> path.split('.')[-1] to handle path like ./dataset/filename.csv
             data_augment = pickle.load(open(path, "rb"))
             print("The head of augmented with remaining and duration times:\n", data_augment.head(10))
 
+        print(data_augment.shape, flush=True)
         #Creating a design matrix that shows one hot vector representation for activity IDs
         cls.design_matrix = cls.__design_matrix_creation(data_augment)
 
@@ -184,6 +185,7 @@ class Input:
         name = path.split(".")[0].split("/")[-1]
         pickle.dump(results, open(name + ".pkl", "wb"))
 
+        return results   # add return results for read_csv_massive
     ######################################################################################
     @classmethod
     def func(cls,dat):
@@ -298,18 +300,22 @@ class Input:
             gr = gr.copy(deep=True)
             gr = gr.reset_index(drop=True)
 
-            # adding a new row at the bottom of each case to denote the end of a case
-            new_row = [0] * gr.shape[1]
-            gr.loc[gr.shape[0]] = new_row
-            gr.iloc[gr.shape[0] - 1, gr.columns.get_loc('0')] = 1  # End of line is denoted by class 0
+            # Commenting out this portion to prevent long tail samples for train/test
+            # for example: from a series of events [3,5,6,8,6,0] no longer generats samples
+            # like [8, 6, 0, 0], [6, 0, 0, 0] and [0, 0, 0, 0]
+            #  
+            # # adding a new row at the bottom of each case to denote the end of a case
+            # new_row = [0] * gr.shape[1]
+            # gr.loc[gr.shape[0]] = new_row
+            # gr.iloc[gr.shape[0] - 1, gr.columns.get_loc('0')] = 1  # End of line is denoted by class 0
 
-            gr_shift = gr.shift(periods=-1, fill_value=0)
-            gr_shift.loc[gr.shape[0] - 1, '0'] = 1
+            # gr_shift = gr.shift(periods=-1, fill_value=0)
+            # gr_shift.loc[gr.shape[0] - 1, '0'] = 1
 
             # Selecting only traces that has length greater than the defined prefix
 
             if (gr.shape[0] - 1 > prefix):
-                for i in range(gr.shape[0]):
+                for i in range(gr.shape[0]-prefix): # change range(gr.shape[0]) ---> range(gr.shape[0]-prefix)
                     # if (i+prefix == gr.shape[0]):
                     #   break
                     # print(gr.iloc[i:i+prefix])
@@ -320,7 +326,7 @@ class Input:
                     try:
                         # print("the prediction:", "the i", i ,gr.iloc[i+prefix,cls])
                         temp_shifted.append(
-                            torch.tensor([gr.iloc[i + prefix, clsN]], dtype=torch.float, requires_grad=False))
+                            torch.tensor([gr.iloc[i+prefix, clsN]], dtype=torch.float, requires_grad=False)) #change gr.iloc[i + prefix, clsN] ---> gr.iloc[-1, clsN]
                     except IndexError:
                         # Printing the end of sequence
                         # print("the prediction:", "ESLE the i", i ,0)

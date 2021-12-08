@@ -97,8 +97,9 @@ def run(path, mode, prefix=4, epoch=1):
 
 
 
-
     return obj
 
 
 
+if __name__ == '__main__':
+    run('./dataset/helpdesk.csv', 'event_prediction', 4, 1)

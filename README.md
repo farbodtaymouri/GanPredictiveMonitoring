@@ -1,4 +1,6 @@
 # GanPredictiveMonitoring
+Predict last event in a business process.
+
 To cite this code use the following:
 
 @InProceedings{10.1007/978-3-030-58666-9_14,

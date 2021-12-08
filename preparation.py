@@ -54,14 +54,15 @@ class Input:
         cls.path = os.getcwd() + "/" + cls.dataset_name + '/'+mode + '/prefix_' + str(cls.prefix_len)
 
         #Reading a file
-        if(path.split('.')[1] == 'csv'):
+        if(path.split('.')[-1] == 'csv'):  #path.split('.')[1]---> path.split('.')[-1] to handle path like ./dataset/filename.csv
             #Reading a CSV file
             #data_augment = cls.__read_csv(path)
             data_augment = cls.__read_csv_massive(path)
-        elif(path.split('.')[1] == 'pkl'):
+        elif(path.split('.')[-1] == 'pkl'):   # path.split('.')[1]---> path.split('.')[-1] to handle path like ./dataset/filename.csv
             data_augment = pickle.load(open(path, "rb"))
             print("The head of augmented with remaining and duration times:\n", data_augment.head(10))
 
+        print(data_augment.shape, flush=True)
         #Creating a design matrix that shows one hot vector representation for activity IDs
         cls.design_matrix = cls.__design_matrix_creation(data_augment)
 
@@ -184,6 +185,7 @@ class Input:
         name = path.split(".")[0].split("/")[-1]
         pickle.dump(results, open(name + ".pkl", "wb"))
 
+        return results   # add return results for read_csv_massive
     ######################################################################################
     @classmethod
     def func(cls,dat):
